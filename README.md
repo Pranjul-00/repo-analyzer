@@ -5,7 +5,7 @@ A command-line interface (CLI) tool written in Rust that fetches and displays st
 ## Installation
 
 1. Clone the repository:
-   git clone https://github.com/yourusername/repo-analyzer.git
+   git clone https://github.com/Pranjul-00/repo-analyzer.git
 
 2. Navigate to the directory:
    cd repo-analyzer
