@@ -18,3 +18,4 @@ A command-line interface (CLI) tool written in Rust that fetches and displays st
 Run the tool by providing a target repository using the `--repo` flag in the `owner/repo` format:
 
 ./target/release/repo-analyzer --repo torvalds/linux
+
