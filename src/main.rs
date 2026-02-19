@@ -10,6 +10,7 @@ use serde::Deserialize;
 struct RepoInfo {
     name: String,
     stargazers_count: u32, // u32 means an unsigned (positive) 32-bit integer
+    open_issues_count: u32,
     
     // We use Option<String> because some repositories don't have a description or a primary language.
     // Instead of crashing, Rust safely stores 'None' if the data is missing.
