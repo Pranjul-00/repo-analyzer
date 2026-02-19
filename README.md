@@ -1,21 +1,14 @@
 # repo-analyzer
 
-A command-line interface (CLI) tool written in Rust that fetches and displays statistics for GitHub repositories.
+A command-line interface (CLI) tool written in Rust that fetches and displays statistics for GitHub repositories. It uses asynchronous requests to quickly pull data such as star count, primary language, and open issues directly to your terminal.
+
+## Prerequisites
+
+To compile and run this tool, you must have Rust and Cargo installed on your system. If you do not have them installed, you can get them from the official Rust website:
+https://rustup.rs/
 
 ## Installation
 
-1. Clone the repository:
-   git clone https://github.com/Pranjul-00/repo-analyzer.git
-
-2. Navigate to the directory:
-   cd repo-analyzer
-
-3. Build the compiled release:
-   cargo build --release
-
-## Usage
-
-Run the tool by providing a target repository using the `--repo` flag in the `owner/repo` format:
-
-./target/release/repo-analyzer --repo torvalds/linux
-
+1. Clone the repository to your local machine:
+   ```bash
+   git clone [https://github.com/Pranjul-00/repo-analyzer.git](https://github.com/Pranjul-00/repo-analyzer.git)
