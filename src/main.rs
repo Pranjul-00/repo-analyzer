@@ -58,6 +58,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("--- Repository Status ---");
         println!("Name:      {}", repo_info.name);
         println!("Stars:     {}", repo_info.stargazers_count);
+        println!("Issues:    {}", repo_info.open_issues_count);
         
         // unwrap_or_else safely handles the Option types. If it's 'None', it prints the fallback text.
         println!("Language:  {}", repo_info.language.unwrap_or_else(|| "Unknown".to_string()));
