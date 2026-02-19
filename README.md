@@ -1,4 +1,4 @@
-# 📊 Repo-Analyzer
+# Repo-Analyzer
 
 `repo-analyzer` is a high-performance command-line interface (CLI) tool built in Rust. It provides a quick and efficient way to fetch and analyze GitHub repository statistics directly from your terminal.
 
@@ -6,7 +6,7 @@ Designed for developers who want to evaluate a project's health and popularity w
 
 ---
 
-## ✨ Features
+## Features
 
 -   **Repository Health at a Glance**: Instantly view stars, open issues, and project descriptions.
 -   **Language Detection**: Identifies the primary programming language of the repository.
@@ -16,7 +16,7 @@ Designed for developers who want to evaluate a project's health and popularity w
 
 ---
 
-## 🛠️ Technical Stack
+## Technical Stack
 
 -   **Language**: Rust (2024 Edition)
 -   **Runtime**: [Tokio](https://tokio.rs/) (Asynchronous ecosystem)
@@ -26,7 +26,7 @@ Designed for developers who want to evaluate a project's health and popularity w
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 
@@ -58,7 +58,7 @@ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 
 ---
 
-## 📖 Usage
+## Usage
 
 The tool requires a GitHub repository path in the format `owner/repository`.
 
@@ -95,7 +95,7 @@ Desc:      Empowering everyone to build reliable and efficient software.
 
 ---
 
-## 🔧 Command Line Options
+## Command Line Options
 
 | Flag | Long Flag | Description | Required |
 | :--- | :--- | :--- | :--- |
@@ -105,7 +105,7 @@ Desc:      Empowering everyone to build reliable and efficient software.
 
 ---
 
-## 🛡️ Error Handling
+## Error Handling
 
 `repo-analyzer` gracefully handles common errors:
 -   **Invalid Repositories**: Notifies you if a repository doesn't exist.
@@ -114,7 +114,7 @@ Desc:      Empowering everyone to build reliable and efficient software.
 
 ---
 
-## 🤝 Contributing
+## Contributing
 
 Contributions are welcome! Feel free to:
 1. Fork the project.
@@ -125,4 +125,4 @@ Contributions are welcome! Feel free to:
 
 ---
 
-*Made with ❤️ using Rust.*
+*Made with Rust.*
