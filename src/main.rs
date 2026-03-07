@@ -52,7 +52,7 @@ struct FullRepoData {
 )]
 struct Args {
     /// The repository names in the format username/reponame (provide multiple to compare)
-    #[arg(index = 1, help = "One or more repos, e.g., 'tokio-rs/tokio actix/actix-web'")]
+    #[arg(index = 1)]
     repos: Vec<String>,
 
     /// Output data in JSON format for scripting or pipe to other tools
@@ -258,7 +258,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             
             let mut header = vec![Cell::new("Metric").fg(Color::Cyan).add_attribute(Attribute::Bold)];
             for res in &results {
-                header.push(Cell::new(&res.info.full_name).fg(Color::Yellow).add_attribute(Attribute::Bold));
+                // Split the full name into two lines: owner\nrepo
+                let split_name = res.info.full_name.replace("/", "\n");
+                header.push(Cell::new(&split_name).fg(Color::Yellow).add_attribute(Attribute::Bold));
             }
             comp.set_header(header);
 
