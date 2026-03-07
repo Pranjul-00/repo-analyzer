@@ -105,6 +105,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             Cell::new(repo_info.forks_count.to_string()).fg(Color::Magenta),
         ]);
         table.add_row(vec![
+            Cell::new("Watchers").fg(Color::Blue).add_attribute(Attribute::Bold),
+            Cell::new(repo_info.subscribers_count.to_string()).fg(Color::Cyan),
+        ]);
+        table.add_row(vec![
             Cell::new("Open Issues").fg(Color::Blue).add_attribute(Attribute::Bold),
             Cell::new(repo_info.open_issues_count.to_string()).fg(Color::Red),
         ]);
