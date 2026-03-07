@@ -44,14 +44,19 @@ struct FullRepoData {
 }
 
 #[derive(Parser, Debug)]
-#[command(author, version, about, long_about = None)]
+#[command(
+    author, 
+    version, 
+    about = "A powerful GitHub repository analyzer and comparison tool.",
+    long_about = "Analyze one or more GitHub repositories side-by-side. Fetches metadata, contributors, and tracks your API rate limits."
+)]
 struct Args {
     /// The repository names in the format username/reponame (provide multiple to compare)
-    #[arg(index = 1)]
+    #[arg(index = 1, help = "One or more repos, e.g., 'tokio-rs/tokio actix/actix-web'")]
     repos: Vec<String>,
 
-    /// Output data in JSON format
-    #[arg(short, long)]
+    /// Output data in JSON format for scripting or pipe to other tools
+    #[arg(short, long, help = "Outputs raw data as a pretty-printed JSON object")]
     json: bool,
 }
 
