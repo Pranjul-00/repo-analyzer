@@ -190,19 +190,46 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     Cell::new("Details").fg(Color::Cyan).add_attribute(Attribute::Bold),
                 ]);
 
-            table.add_row(vec![Cell::new("Full Name").fg(Color::Blue).bold(), Cell::new(&info.full_name).fg(Color::Yellow).bold()]);
-            table.add_row(vec![Cell::new("Repo Name").fg(Color::Blue).bold(), Cell::new(&info.name)]);
-            table.add_row(vec![Cell::new("URL").fg(Color::Blue).bold(), Cell::new(&info.html_url).fg(Color::DarkGrey).italic()]);
-            table.add_row(vec![Cell::new("Language").fg(Color::Blue).bold(), Cell::new(info.language.as_deref().unwrap_or("Unknown")).fg(Color::Green)]);
-            table.add_row(vec![Cell::new("Stars").fg(Color::Blue).bold(), Cell::new(info.stargazers_count.to_string()).fg(Color::Yellow)]);
-            table.add_row(vec![Cell::new("Forks").fg(Color::Blue).bold(), Cell::new(info.forks_count.to_string()).fg(Color::Magenta)]);
-            table.add_row(vec![Cell::new("Watchers").fg(Color::Blue).bold(), Cell::new(info.subscribers_count.to_string()).fg(Color::Cyan)]);
-            table.add_row(vec![Cell::new("Issues").fg(Color::Blue).bold(), Cell::new(info.open_issues_count.to_string()).fg(Color::Red)]);
-            table.add_row(vec![Cell::new("Size").fg(Color::Blue).bold(), Cell::new(format!("{} KB", info.size))]);
+            table.add_row(vec![
+                Cell::new("Full Name").fg(Color::Blue).add_attribute(Attribute::Bold), 
+                Cell::new(&info.full_name).fg(Color::Yellow).add_attribute(Attribute::Bold)
+            ]);
+            table.add_row(vec![Cell::new("Repo Name").fg(Color::Blue).add_attribute(Attribute::Bold), Cell::new(&info.name)]);
+            table.add_row(vec![
+                Cell::new("URL").fg(Color::Blue).add_attribute(Attribute::Bold), 
+                Cell::new(&info.html_url).fg(Color::DarkGrey).add_attribute(Attribute::Italic)
+            ]);
+            table.add_row(vec![
+                Cell::new("Language").fg(Color::Blue).add_attribute(Attribute::Bold), 
+                Cell::new(info.language.as_deref().unwrap_or("Unknown")).fg(Color::Green)
+            ]);
+            table.add_row(vec![
+                Cell::new("Stars").fg(Color::Blue).add_attribute(Attribute::Bold), 
+                Cell::new(info.stargazers_count.to_string()).fg(Color::Yellow)
+            ]);
+            table.add_row(vec![
+                Cell::new("Forks").fg(Color::Blue).add_attribute(Attribute::Bold), 
+                Cell::new(info.forks_count.to_string()).fg(Color::Magenta)
+            ]);
+            table.add_row(vec![
+                Cell::new("Watchers").fg(Color::Blue).add_attribute(Attribute::Bold), 
+                Cell::new(info.subscribers_count.to_string()).fg(Color::Cyan)
+            ]);
+            table.add_row(vec![
+                Cell::new("Issues").fg(Color::Blue).add_attribute(Attribute::Bold), 
+                Cell::new(info.open_issues_count.to_string()).fg(Color::Red)
+            ]);
+            table.add_row(vec![
+                Cell::new("Size").fg(Color::Blue).add_attribute(Attribute::Bold), 
+                Cell::new(format!("{} KB", info.size))
+            ]);
             
             let lic = info.license.as_ref().map(|l| l.name.clone()).unwrap_or_else(|| "No license".to_string());
-            table.add_row(vec![Cell::new("License").fg(Color::Blue).bold(), Cell::new(lic)]);
-            table.add_row(vec![Cell::new("Description").fg(Color::Blue).bold(), Cell::new(info.description.as_deref().unwrap_or("None")).italic()]);
+            table.add_row(vec![Cell::new("License").fg(Color::Blue).add_attribute(Attribute::Bold), Cell::new(lic)]);
+            table.add_row(vec![
+                Cell::new("Description").fg(Color::Blue).add_attribute(Attribute::Bold), 
+                Cell::new(info.description.as_deref().unwrap_or("None")).add_attribute(Attribute::Italic)
+            ]);
 
             println!("\n{}", table);
 
@@ -213,7 +240,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     Cell::new("Contributions").fg(Color::Cyan).add_attribute(Attribute::Bold),
                 ]);
                 for c in &data.top_contributors {
-                    ct.add_row(vec![Cell::new(&c.login).bold(), Cell::new(c.contributions.to_string()).fg(Color::Yellow)]);
+                    ct.add_row(vec![
+                        Cell::new(&c.login).add_attribute(Attribute::Bold), 
+                        Cell::new(c.contributions.to_string()).fg(Color::Yellow)
+                    ]);
                 }
                 println!("\n{}", ct);
             }
@@ -221,13 +251,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let mut comp = Table::new();
             comp.load_preset(UTF8_FULL).apply_modifier(UTF8_ROUND_CORNERS).set_content_arrangement(ContentArrangement::Dynamic);
             
-            let mut header = vec![Cell::new("Metric").fg(Color::Cyan).bold()];
+            let mut header = vec![Cell::new("Metric").fg(Color::Cyan).add_attribute(Attribute::Bold)];
             for res in &results {
-                header.push(Cell::new(&res.info.full_name).fg(Color::Yellow).bold());
+                header.push(Cell::new(&res.info.full_name).fg(Color::Yellow).add_attribute(Attribute::Bold));
             }
             comp.set_header(header);
 
-            comp.add_row(build_row("Language", &results, |r| r.info.language.as_deref().unwrap_or("-"), Color::Green));
+            comp.add_row(build_row("Language", &results, |r| r.info.language.as_deref().unwrap_or("-").to_string(), Color::Green));
             comp.add_row(build_row("Stars", &results, |r| r.info.stargazers_count.to_string(), Color::Yellow));
             comp.add_row(build_row("Forks", &results, |r| r.info.forks_count.to_string(), Color::Magenta));
             comp.add_row(build_row("Watchers", &results, |r| r.info.subscribers_count.to_string(), Color::Cyan));
@@ -238,7 +268,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             println!("{}", comp);
         }
 
-        // Display Rate Limit info if available
         if let Some(headers) = last_headers {
             if let Some(rate) = extract_rate_limit(&headers) {
                 println!("\n{} {}/{} remaining (Resets in {}m)", 
@@ -256,7 +285,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 fn build_row<F>(label: &str, results: &[FullRepoData], f: F, color: Color) -> Vec<Cell> 
 where F: Fn(&FullRepoData) -> String {
-    let mut row = vec![Cell::new(label).fg(Color::Blue).bold()];
+    let mut row = vec![Cell::new(label).fg(Color::Blue).add_attribute(Attribute::Bold)];
     for res in results {
         row.push(Cell::new(f(res)).fg(color));
     }
