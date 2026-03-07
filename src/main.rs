@@ -94,7 +94,6 @@ async fn fetch_repo_data(
 ) -> Result<(FullRepoData, HeaderMap), Box<dyn std::error::Error>> {
     let base_url = format!("https://api.github.com/repos/{}", repo_name);
     
-    // 1. Fetch Repo Info
     let mut repo_req = client.get(&base_url).header(USER_AGENT, "repo-analyzer-cli");
     if let Some(t) = token {
         repo_req = repo_req.header(AUTHORIZATION, format!("Bearer {}", t));
@@ -108,7 +107,6 @@ async fn fetch_repo_data(
     let headers = repo_res.headers().clone();
     let repo_info: RepoInfo = repo_res.json().await?;
 
-    // 2. Fetch Contributors
     let contrib_url = format!("{}/contributors?per_page=5", base_url);
     let mut contrib_req = client.get(&contrib_url).header(USER_AGENT, "repo-analyzer-cli");
     if let Some(t) = token {
@@ -121,7 +119,6 @@ async fn fetch_repo_data(
         Vec::new()
     };
 
-    // 3. Fetch Languages
     let lang_url = format!("{}/languages", base_url);
     let mut lang_req = client.get(&lang_url).header(USER_AGENT, "repo-analyzer-cli");
     if let Some(t) = token {
@@ -204,137 +201,117 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     if args.json {
         println!("{}", serde_json::to_string_pretty(&results)?);
-    } else {
-        if results.len() == 1 {
-            let data = &results[0];
-            let info = &data.info;
-            
-            let mut table = Table::new();
-            table
-                .load_preset(UTF8_FULL)
-                .apply_modifier(UTF8_ROUND_CORNERS)
-                .set_content_arrangement(ContentArrangement::Dynamic)
-                .set_width(80)
-                .set_header(vec![
-                    Cell::new("Metric").fg(Color::Cyan).add_attribute(Attribute::Bold),
-                    Cell::new("Details").fg(Color::Cyan).add_attribute(Attribute::Bold),
-                ]);
-
-            table.add_row(vec![
-                Cell::new("Repo Name").fg(Color::Blue).add_attribute(Attribute::Bold), 
-                Cell::new(&info.name).fg(Color::Yellow).add_attribute(Attribute::Bold)
-            ]);
-            table.add_row(vec![
-                Cell::new("Owner").fg(Color::Blue).add_attribute(Attribute::Bold), 
-                Cell::new(info.owner())
-            ]);
-            table.add_row(vec![
-                Cell::new("URL").fg(Color::Blue).add_attribute(Attribute::Bold), 
-                Cell::new(&info.html_url).fg(Color::DarkGrey).add_attribute(Attribute::Italic)
-            ]);
-            table.add_row(vec![
-                Cell::new("Primary Language").fg(Color::Blue).add_attribute(Attribute::Bold), 
-                Cell::new(info.language.as_deref().unwrap_or("Unknown")).fg(Color::Green)
-            ]);
-            table.add_row(vec![
-                Cell::new("Stars").fg(Color::Blue).add_attribute(Attribute::Bold), 
-                Cell::new(info.stargazers_count.to_string()).fg(Color::Yellow)
-            ]);
-            table.add_row(vec![
-                Cell::new("Forks").fg(Color::Blue).add_attribute(Attribute::Bold), 
-                Cell::new(info.forks_count.to_string()).fg(Color::Magenta)
-            ]);
-            table.add_row(vec![
-                Cell::new("Watchers").fg(Color::Blue).add_attribute(Attribute::Bold), 
-                Cell::new(info.subscribers_count.to_string()).fg(Color::Cyan)
-            ]);
-            table.add_row(vec![
-                Cell::new("Issues").fg(Color::Blue).add_attribute(Attribute::Bold), 
-                Cell::new(info.open_issues_count.to_string()).fg(Color::Red)
-            ]);
-            table.add_row(vec![
-                Cell::new("Size").fg(Color::Blue).add_attribute(Attribute::Bold), 
-                Cell::new(format!("{} KB", info.size))
-            ]);
-            
-            let lic = info.license.as_ref().map(|l| l.name.clone()).unwrap_or_else(|| "No license".to_string());
-            table.add_row(vec![Cell::new("License").fg(Color::Blue).add_attribute(Attribute::Bold), Cell::new(lic)]);
-            table.add_row(vec![
-                Cell::new("Description").fg(Color::Blue).add_attribute(Attribute::Bold), 
-                Cell::new(info.description.as_deref().unwrap_or("None")).add_attribute(Attribute::Italic)
+    } else if results.len() == 1 {
+        let data = &results[0];
+        let info = &data.info;
+        
+        // 1. Build Main Info Table
+        let mut main_table = Table::new();
+        main_table
+            .load_preset(UTF8_FULL)
+            .apply_modifier(UTF8_ROUND_CORNERS)
+            .set_header(vec![
+                Cell::new("Metric").fg(Color::Cyan).add_attribute(Attribute::Bold),
+                Cell::new("Details").fg(Color::Cyan).add_attribute(Attribute::Bold),
             ]);
 
-            println!("\n{}", table);
+        main_table.add_row(vec![Cell::new("Repo Name").fg(Color::Blue).add_attribute(Attribute::Bold), Cell::new(&info.name).fg(Color::Yellow).add_attribute(Attribute::Bold)]);
+        main_table.add_row(vec![Cell::new("Owner").fg(Color::Blue).add_attribute(Attribute::Bold), Cell::new(info.owner())]);
+        main_table.add_row(vec![Cell::new("Stars").fg(Color::Blue).add_attribute(Attribute::Bold), Cell::new(info.stargazers_count.to_string()).fg(Color::Yellow)]);
+        main_table.add_row(vec![Cell::new("Forks").fg(Color::Blue).add_attribute(Attribute::Bold), Cell::new(info.forks_count.to_string()).fg(Color::Magenta)]);
+        main_table.add_row(vec![Cell::new("Watchers").fg(Color::Blue).add_attribute(Attribute::Bold), Cell::new(info.subscribers_count.to_string()).fg(Color::Cyan)]);
+        main_table.add_row(vec![Cell::new("Issues").fg(Color::Blue).add_attribute(Attribute::Bold), Cell::new(info.open_issues_count.to_string()).fg(Color::Red)]);
+        main_table.add_row(vec![Cell::new("Size").fg(Color::Blue).add_attribute(Attribute::Bold), Cell::new(format!("{} KB", info.size))]);
+        
+        let lic = info.license.as_ref().map(|l| l.name.clone()).unwrap_or_else(|| "No license".to_string());
+        main_table.add_row(vec![Cell::new("License").fg(Color::Blue).add_attribute(Attribute::Bold), Cell::new(lic)]);
 
-            // Language Breakdown Table
-            if !data.languages.is_empty() {
-                let total_bytes: u64 = data.languages.values().sum();
-                let mut lang_table = Table::new();
-                lang_table
-                    .load_preset(UTF8_FULL)
-                    .apply_modifier(UTF8_ROUND_CORNERS)
-                    .set_header(vec![
-                        Cell::new("Language").fg(Color::Cyan).add_attribute(Attribute::Bold),
-                        Cell::new("Percentage").fg(Color::Cyan).add_attribute(Attribute::Bold),
-                    ]);
+        // 2. Build Language Breakdown Table
+        let mut lang_table = Table::new();
+        lang_table
+            .load_preset(UTF8_FULL)
+            .apply_modifier(UTF8_ROUND_CORNERS)
+            .set_header(vec![
+                Cell::new("Language").fg(Color::Cyan).add_attribute(Attribute::Bold),
+                Cell::new("%").fg(Color::Cyan).add_attribute(Attribute::Bold),
+            ]);
 
-                for (lang, bytes) in &data.languages {
-                    let percentage = (*bytes as f64 / total_bytes as f64) * 100.0;
-                    lang_table.add_row(vec![
-                        Cell::new(lang).fg(Color::White).add_attribute(Attribute::Bold),
-                        Cell::new(format!("{:.1}%", percentage)).fg(Color::Green),
-                    ]);
-                }
-                println!("\n{}", lang_table);
-            }
-
-            // Contributors Table
-            if !data.top_contributors.is_empty() {
-                let mut ct = Table::new();
-                ct.load_preset(UTF8_FULL).apply_modifier(UTF8_ROUND_CORNERS).set_header(vec![
-                    Cell::new("Contributor").fg(Color::Cyan).add_attribute(Attribute::Bold),
-                    Cell::new("Contributions").fg(Color::Cyan).add_attribute(Attribute::Bold),
-                ]);
-                for c in &data.top_contributors {
-                    ct.add_row(vec![
-                        Cell::new(&c.login).add_attribute(Attribute::Bold), 
-                        Cell::new(c.contributions.to_string()).fg(Color::Yellow),
-                    ]);
-                }
-                println!("\n{}", ct);
-            }
-        } else {
-            // Multi-repo Comparison Mode
-            let mut comp = Table::new();
-            comp.load_preset(UTF8_FULL).apply_modifier(UTF8_ROUND_CORNERS).set_content_arrangement(ContentArrangement::Dynamic);
-            
-            let mut header = vec![Cell::new("Metric").fg(Color::Cyan).add_attribute(Attribute::Bold)];
-            for res in &results {
-                header.push(Cell::new(&res.info.name).fg(Color::Yellow).add_attribute(Attribute::Bold));
-            }
-            comp.set_header(header);
-
-            comp.add_row(build_row("Owner", &results, |r| r.info.owner().to_string(), Color::White));
-            comp.add_row(build_row("Primary Lang", &results, |r| r.info.language.as_deref().unwrap_or("-").to_string(), Color::Green));
-            comp.add_row(build_row("Stars", &results, |r| r.info.stargazers_count.to_string(), Color::Yellow));
-            comp.add_row(build_row("Forks", &results, |r| r.info.forks_count.to_string(), Color::Magenta));
-            comp.add_row(build_row("Watchers", &results, |r| r.info.subscribers_count.to_string(), Color::Cyan));
-            comp.add_row(build_row("Issues", &results, |r| r.info.open_issues_count.to_string(), Color::Red));
-            comp.add_row(build_row("Size (KB)", &results, |r| r.info.size.to_string(), Color::White));
-
-            println!("\n{}", "--- Side-by-Side Comparison ---".bold().magenta());
-            println!("{}", comp);
+        let total_bytes: u64 = data.languages.values().sum();
+        for (lang, bytes) in &data.languages {
+            let percentage = (*bytes as f64 / total_bytes as f64) * 100.0;
+            lang_table.add_row(vec![
+                Cell::new(lang).fg(Color::White).add_attribute(Attribute::Bold),
+                Cell::new(format!("{:.1}%", percentage)).fg(Color::Green),
+            ]);
         }
 
-        if let Some(headers) = last_headers {
-            if let Some(rate) = extract_rate_limit(&headers) {
-                println!("\n{} {}/{} remaining (Resets in {}m)", 
-                    "Rate Limit:".dimmed(), 
-                    rate.remaining.cyan(), 
-                    rate.limit.dimmed(), 
-                    rate.reset_in_mins.to_string().yellow()
-                );
-            }
+        // 3. Build Contributors Table
+        let mut contrib_table = Table::new();
+        contrib_table
+            .load_preset(UTF8_FULL)
+            .apply_modifier(UTF8_ROUND_CORNERS)
+            .set_header(vec![
+                Cell::new("Top Contributors").fg(Color::Cyan).add_attribute(Attribute::Bold),
+                Cell::new("Hits").fg(Color::Cyan).add_attribute(Attribute::Bold),
+            ]);
+        for c in &data.top_contributors {
+            contrib_table.add_row(vec![
+                Cell::new(&c.login).add_attribute(Attribute::Bold), 
+                Cell::new(c.contributions.to_string()).fg(Color::Yellow),
+            ]);
+        }
+
+        // --- THE DASHBOARD LAYOUT ---
+        // Create an invisible outer table to hold the 3 tables side-by-side
+        let mut dashboard = Table::new();
+        dashboard
+            .load_preset("                ") // Empty preset for invisible borders
+            .set_content_arrangement(ContentArrangement::Dynamic)
+            .set_width(120);
+
+        dashboard.add_row(vec![
+            Cell::new(main_table),
+            Cell::new(lang_table),
+            Cell::new(contrib_table),
+        ]);
+
+        println!("\n{}", dashboard);
+        
+        // Print URL and Description below the dashboard since they are long
+        println!("{} {}", "URL:".blue().bold(), info.html_url.dimmed());
+        println!("{} {}\n", "Description:".blue().bold(), info.description.as_deref().unwrap_or("None").italic());
+
+    } else {
+        // Multi-repo Comparison Mode
+        let mut comp = Table::new();
+        comp.load_preset(UTF8_FULL).apply_modifier(UTF8_ROUND_CORNERS).set_content_arrangement(ContentArrangement::Dynamic);
+        
+        let mut header = vec![Cell::new("Metric").fg(Color::Cyan).add_attribute(Attribute::Bold)];
+        for res in &results {
+            header.push(Cell::new(&res.info.name).fg(Color::Yellow).add_attribute(Attribute::Bold));
+        }
+        comp.set_header(header);
+
+        comp.add_row(build_row("Owner", &results, |r| r.info.owner().to_string(), Color::White));
+        comp.add_row(build_row("Primary Lang", &results, |r| r.info.language.as_deref().unwrap_or("-").to_string(), Color::Green));
+        comp.add_row(build_row("Stars", &results, |r| r.info.stargazers_count.to_string(), Color::Yellow));
+        comp.add_row(build_row("Forks", &results, |r| r.info.forks_count.to_string(), Color::Magenta));
+        comp.add_row(build_row("Watchers", &results, |r| r.info.subscribers_count.to_string(), Color::Cyan));
+        comp.add_row(build_row("Issues", &results, |r| r.info.open_issues_count.to_string(), Color::Red));
+        comp.add_row(build_row("Size (KB)", &results, |r| r.info.size.to_string(), Color::White));
+
+        println!("\n{}", "--- Side-by-Side Comparison ---".bold().magenta());
+        println!("{}", comp);
+    }
+
+    if let Some(headers) = last_headers {
+        if let Some(rate) = extract_rate_limit(&headers) {
+            println!("\n{} {}/{} remaining (Resets in {}m)", 
+                "Rate Limit:".dimmed(), 
+                rate.remaining.cyan(), 
+                rate.limit.dimmed(), 
+                rate.reset_in_mins.to_string().yellow()
+            );
         }
     }
 
