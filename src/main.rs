@@ -25,6 +25,7 @@ struct Contributor {
 #[derive(Deserialize, Serialize, Debug, Clone)]
 struct RepoInfo {
     name: String,
+    full_name: String,
     stargazers_count: u32,
     open_issues_count: u32,
     forks_count: u32,
@@ -167,7 +168,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 Cell::new("Details").fg(Color::Cyan).add_attribute(Attribute::Bold),
             ]);
 
-        table.add_row(vec![Cell::new("Name").fg(Color::Blue).add_attribute(Attribute::Bold), Cell::new(&info.name)]);
+        table.add_row(vec![
+            Cell::new("Full Name").fg(Color::Blue).add_attribute(Attribute::Bold),
+            Cell::new(&info.full_name).fg(Color::Yellow).add_attribute(Attribute::Bold),
+        ]);
+        table.add_row(vec![Cell::new("Repo Name").fg(Color::Blue).add_attribute(Attribute::Bold), Cell::new(&info.name)]);
         table.add_row(vec![Cell::new("URL").fg(Color::Blue).add_attribute(Attribute::Bold), Cell::new(&info.html_url).fg(Color::DarkGrey).add_attribute(Attribute::Italic)]);
         table.add_row(vec![Cell::new("Language").fg(Color::Blue).add_attribute(Attribute::Bold), Cell::new(info.language.as_deref().unwrap_or("Unknown")).fg(Color::Green)]);
         table.add_row(vec![Cell::new("Stars").fg(Color::Blue).add_attribute(Attribute::Bold), Cell::new(info.stargazers_count.to_string()).fg(Color::Yellow)]);
@@ -200,7 +205,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         
         let mut header = vec![Cell::new("Metric").fg(Color::Cyan).add_attribute(Attribute::Bold)];
         for res in &results {
-            header.push(Cell::new(&res.info.name).fg(Color::Yellow).add_attribute(Attribute::Bold));
+            header.push(Cell::new(&res.info.full_name).fg(Color::Yellow).add_attribute(Attribute::Bold));
         }
         comp.set_header(header);
 
