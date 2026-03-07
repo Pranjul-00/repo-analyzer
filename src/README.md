@@ -1,19 +1,19 @@
-# 📊 Repo Analyzer CLI
+# Repo Analyzer CLI
 
 A fast and clean Rust-based command-line tool to quickly analyze any GitHub repository. Get stars, forks, issues, and more directly in your terminal with a beautifully styled output.
 
 ---
 
-## 🚀 Features
+## Features
 
 - **Interactive Mode**: Prompts you for the repository name if you forget to provide it.
 - **Positional Arguments**: Fast usage with just `cargo run -- <repo>`.
-- **Rich Output**: Clean, colored, and emoji-free data visualization.
+- **Rich Output**: Clean, colored, and text-only data visualization.
 - **Detailed Stats**: View stars, forks, watchers, open issues, repository size, language, and license.
 
 ---
 
-## 🛠️ Installation
+## Installation
 
 ### 1. Prerequisites
 Make sure you have [Rust and Cargo](https://rustup.rs/) installed on your system.
@@ -31,7 +31,7 @@ cargo build --release
 
 ---
 
-## 📖 How to Use
+## How to Use
 
 There are two ways to use the Repo Analyzer:
 
@@ -49,7 +49,7 @@ cargo run
 
 ---
 
-## ⚙️ Advanced Usage (System-wide)
+## Advanced Usage (System-wide)
 
 If you want to use the analyzer from anywhere on your computer without typing `cargo run`:
 
@@ -69,11 +69,11 @@ If you want to use the analyzer from anywhere on your computer without typing `c
 
 ---
 
-## ⚠️ Rate Limits
+## Rate Limits
 
 By default, the GitHub API allows **60 requests per hour** for unauthenticated users. If you hit this limit, you will see an error message. Wait an hour or contribute to the project to help us add Token support!
 
 ---
 
-## 📄 License
+## License
 This project is open-source. Check the repository's license for more details.
