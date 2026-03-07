@@ -1,8 +1,13 @@
 use clap::Parser;
 use colored::*;
+use comfy_table::modifiers::UTF8_ROUND_CORNERS;
+use comfy_table::presets::UTF8_FULL;
+use comfy_table::{Cell, Color, ContentArrangement, Table};
 use dialoguer::Input;
+use indicatif::{ProgressBar, ProgressStyle};
 use reqwest::header::USER_AGENT;
 use serde::Deserialize;
+use std::time::Duration;
 
 #[derive(Deserialize, Debug)]
 struct License {
@@ -35,7 +40,6 @@ struct Args {
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
     
-    // If repo is provided as a positional arg, use it. Otherwise, prompt the user.
     let repo_name = match args.repo {
         Some(r) => r,
         None => {
@@ -46,7 +50,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     };
 
-    println!("\n{} {}...\n", "Scanning repository:".cyan().bold(), repo_name.yellow());
+    // Setup a professional spinner
+    let pb = ProgressBar::new_spinner();
+    pb.set_style(
+        ProgressStyle::default_spinner()
+            .tick_chars("|/-\\")
+            .template("{spinner:.cyan} {msg}")?,
+    );
+    pb.set_message("Fetching repository data...");
+    pb.enable_steady_tick(Duration::from_millis(100));
 
     let url = format!("https://api.github.com/repos/{}", repo_name);
     let client = reqwest::Client::new();
@@ -57,27 +69,67 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .send()
         .await?;
 
+    // Stop and clear the spinner once we have the response
+    pb.finish_and_clear();
+
     if response.status().is_success() {
         let repo_info: RepoInfo = response.json().await?;
 
-        println!("{}", "--- Repository Status ---".magenta().bold());
-        println!("{:<15} {}", "Name:".blue().bold(), repo_info.name.white());
-        println!("{:<15} {}", "URL:".blue().bold(), repo_info.html_url.underline().white());
-        println!("{:<15} {}", "Stars:".blue().bold(), repo_info.stargazers_count.to_string().yellow());
-        println!("{:<15} {}", "Forks:".blue().bold(), repo_info.forks_count.to_string().green());
-        println!("{:<15} {}", "Watchers:".blue().bold(), repo_info.subscribers_count.to_string().cyan());
-        println!("{:<15} {}", "Open Issues:".blue().bold(), repo_info.open_issues_count.to_string().red());
-        println!("{:<15} {} KB", "Size:".blue().bold(), repo_info.size.to_string().white());
-        println!("{:<15} {}", "Language:".blue().bold(), repo_info.language.unwrap_or_else(|| "Unknown".to_string()).green());
+        let mut table = Table::new();
+        table
+            .load_preset(UTF8_FULL)
+            .apply_modifier(UTF8_ROUND_CORNERS)
+            .set_content_arrangement(ContentArrangement::Dynamic)
+            .set_width(80)
+            .set_header(vec![
+                Cell::new("Metric").fg(Color::Cyan).bold(),
+                Cell::new("Details").fg(Color::Cyan).bold(),
+            ]);
+
+        table.add_row(vec![
+            Cell::new("Name").fg(Color::Blue).bold(),
+            Cell::new(&repo_info.name).fg(Color::White),
+        ]);
+        table.add_row(vec![
+            Cell::new("URL").fg(Color::Blue).bold(),
+            Cell::new(&repo_info.html_url).fg(Color::DarkGrey).italic(),
+        ]);
+        table.add_row(vec![
+            Cell::new("Language").fg(Color::Blue).bold(),
+            Cell::new(repo_info.language.unwrap_or_else(|| "Unknown".to_string())).fg(Color::Green),
+        ]);
+        table.add_row(vec![
+            Cell::new("Stars").fg(Color::Blue).bold(),
+            Cell::new(repo_info.stargazers_count.to_string()).fg(Color::Yellow),
+        ]);
+        table.add_row(vec![
+            Cell::new("Forks").fg(Color::Blue).bold(),
+            Cell::new(repo_info.forks_count.to_string()).fg(Color::Magenta),
+        ]);
+        table.add_row(vec![
+            Cell::new("Open Issues").fg(Color::Blue).bold(),
+            Cell::new(repo_info.open_issues_count.to_string()).fg(Color::Red),
+        ]);
+        table.add_row(vec![
+            Cell::new("Size").fg(Color::Blue).bold(),
+            Cell::new(format!("{} KB", repo_info.size)).fg(Color::White),
+        ]);
         
         let license_name = match repo_info.license {
             Some(l) => l.name,
             None => "No license found".to_string(),
         };
-        println!("{:<15} {}", "License:".blue().bold(), license_name.white());
+        table.add_row(vec![
+            Cell::new("License").fg(Color::Blue).bold(),
+            Cell::new(license_name).fg(Color::White),
+        ]);
         
-        println!("{:<15} {}", "Description:".blue().bold(), repo_info.description.unwrap_or_else(|| "No description provided.".to_string()).italic().white());
-        println!("{}", "---------------------------".magenta().bold());
+        table.add_row(vec![
+            Cell::new("Description").fg(Color::Blue).bold(),
+            Cell::new(repo_info.description.unwrap_or_else(|| "No description provided.".to_string())).italic(),
+        ]);
+
+        println!("\n{}", table);
     } else if response.status().as_u16() == 404 {
         println!("{} {}", "Error:".red().bold(), "Repository not found. Check the username/reponame format.".white());
     } else if response.status().as_u16() == 403 {
