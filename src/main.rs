@@ -8,6 +8,7 @@ use dotenvy::dotenv;
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use reqwest::header::{HeaderMap, AUTHORIZATION, USER_AGENT};
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
 use std::env;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
@@ -48,6 +49,7 @@ impl RepoInfo {
 struct FullRepoData {
     info: RepoInfo,
     top_contributors: Vec<Contributor>,
+    languages: BTreeMap<String, u64>,
 }
 
 #[derive(Parser, Debug)]
@@ -90,8 +92,10 @@ async fn fetch_repo_data(
     repo_name: &str,
     token: Option<&String>,
 ) -> Result<(FullRepoData, HeaderMap), Box<dyn std::error::Error>> {
-    let repo_url = format!("https://api.github.com/repos/{}", repo_name);
-    let mut repo_req = client.get(&repo_url).header(USER_AGENT, "repo-analyzer-cli");
+    let base_url = format!("https://api.github.com/repos/{}", repo_name);
+    
+    // 1. Fetch Repo Info
+    let mut repo_req = client.get(&base_url).header(USER_AGENT, "repo-analyzer-cli");
     if let Some(t) = token {
         repo_req = repo_req.header(AUTHORIZATION, format!("Bearer {}", t));
     }
@@ -104,22 +108,36 @@ async fn fetch_repo_data(
     let headers = repo_res.headers().clone();
     let repo_info: RepoInfo = repo_res.json().await?;
 
-    let contrib_url = format!("https://api.github.com/repos/{}/contributors?per_page=5", repo_name);
+    // 2. Fetch Contributors
+    let contrib_url = format!("{}/contributors?per_page=5", base_url);
     let mut contrib_req = client.get(&contrib_url).header(USER_AGENT, "repo-analyzer-cli");
     if let Some(t) = token {
         contrib_req = contrib_req.header(AUTHORIZATION, format!("Bearer {}", t));
     }
     let contrib_res = contrib_req.send().await?;
-
     let contributors: Vec<Contributor> = if contrib_res.status().is_success() {
         contrib_res.json().await?
     } else {
         Vec::new()
     };
 
+    // 3. Fetch Languages
+    let lang_url = format!("{}/languages", base_url);
+    let mut lang_req = client.get(&lang_url).header(USER_AGENT, "repo-analyzer-cli");
+    if let Some(t) = token {
+        lang_req = lang_req.header(AUTHORIZATION, format!("Bearer {}", t));
+    }
+    let lang_res = lang_req.send().await?;
+    let languages: BTreeMap<String, u64> = if lang_res.status().is_success() {
+        lang_res.json().await?
+    } else {
+        BTreeMap::new()
+    };
+
     Ok((FullRepoData {
         info: repo_info,
         top_contributors: contributors,
+        languages,
     }, headers))
 }
 
@@ -215,7 +233,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 Cell::new(&info.html_url).fg(Color::DarkGrey).add_attribute(Attribute::Italic)
             ]);
             table.add_row(vec![
-                Cell::new("Language").fg(Color::Blue).add_attribute(Attribute::Bold), 
+                Cell::new("Primary Language").fg(Color::Blue).add_attribute(Attribute::Bold), 
                 Cell::new(info.language.as_deref().unwrap_or("Unknown")).fg(Color::Green)
             ]);
             table.add_row(vec![
@@ -248,6 +266,29 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
             println!("\n{}", table);
 
+            // Language Breakdown Table
+            if !data.languages.is_empty() {
+                let total_bytes: u64 = data.languages.values().sum();
+                let mut lang_table = Table::new();
+                lang_table
+                    .load_preset(UTF8_FULL)
+                    .apply_modifier(UTF8_ROUND_CORNERS)
+                    .set_header(vec![
+                        Cell::new("Language").fg(Color::Cyan).add_attribute(Attribute::Bold),
+                        Cell::new("Percentage").fg(Color::Cyan).add_attribute(Attribute::Bold),
+                    ]);
+
+                for (lang, bytes) in &data.languages {
+                    let percentage = (*bytes as f64 / total_bytes as f64) * 100.0;
+                    lang_table.add_row(vec![
+                        Cell::new(lang).fg(Color::White).add_attribute(Attribute::Bold),
+                        Cell::new(format!("{:.1}%", percentage)).fg(Color::Green),
+                    ]);
+                }
+                println!("\n{}", lang_table);
+            }
+
+            // Contributors Table
             if !data.top_contributors.is_empty() {
                 let mut ct = Table::new();
                 ct.load_preset(UTF8_FULL).apply_modifier(UTF8_ROUND_CORNERS).set_header(vec![
@@ -263,7 +304,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 println!("\n{}", ct);
             }
         } else {
-            // Multi-repo Comparison Mode (2 or more)
+            // Multi-repo Comparison Mode
             let mut comp = Table::new();
             comp.load_preset(UTF8_FULL).apply_modifier(UTF8_ROUND_CORNERS).set_content_arrangement(ContentArrangement::Dynamic);
             
@@ -274,7 +315,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             comp.set_header(header);
 
             comp.add_row(build_row("Owner", &results, |r| r.info.owner().to_string(), Color::White));
-            comp.add_row(build_row("Language", &results, |r| r.info.language.as_deref().unwrap_or("-").to_string(), Color::Green));
+            comp.add_row(build_row("Primary Lang", &results, |r| r.info.language.as_deref().unwrap_or("-").to_string(), Color::Green));
             comp.add_row(build_row("Stars", &results, |r| r.info.stargazers_count.to_string(), Color::Yellow));
             comp.add_row(build_row("Forks", &results, |r| r.info.forks_count.to_string(), Color::Magenta));
             comp.add_row(build_row("Watchers", &results, |r| r.info.subscribers_count.to_string(), Color::Cyan));
