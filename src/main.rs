@@ -20,6 +20,7 @@ struct License {
 struct Contributor {
     login: String,
     contributions: u32,
+    html_url: String,
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
@@ -250,13 +251,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             if !data.top_contributors.is_empty() {
                 let mut ct = Table::new();
                 ct.load_preset(UTF8_FULL).apply_modifier(UTF8_ROUND_CORNERS).set_header(vec![
-                    Cell::new("Top Contributors").fg(Color::Cyan).add_attribute(Attribute::Bold),
+                    Cell::new("Contributor").fg(Color::Cyan).add_attribute(Attribute::Bold),
                     Cell::new("Contributions").fg(Color::Cyan).add_attribute(Attribute::Bold),
+                    Cell::new("Profile URL").fg(Color::Cyan).add_attribute(Attribute::Bold),
                 ]);
                 for c in &data.top_contributors {
                     ct.add_row(vec![
                         Cell::new(&c.login).add_attribute(Attribute::Bold), 
-                        Cell::new(c.contributions.to_string()).fg(Color::Yellow)
+                        Cell::new(c.contributions.to_string()).fg(Color::Yellow),
+                        Cell::new(&c.html_url).fg(Color::DarkGrey).add_attribute(Attribute::Italic).add_attribute(Attribute::Underlined),
                     ]);
                 }
                 println!("\n{}", ct);
