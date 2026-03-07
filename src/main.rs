@@ -217,7 +217,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             ]);
             table.add_row(vec![
                 Cell::new("URL").fg(Color::Blue).add_attribute(Attribute::Bold), 
-                Cell::new(make_link(&info.html_url, &info.html_url)).fg(Color::DarkGrey).add_attribute(Attribute::Italic).add_attribute(Attribute::Underlined)
+                Cell::new(make_link(&info.html_url, &info.html_url)).fg(Color::DarkGrey).add_attribute(Attribute::Italic)
             ]);
             table.add_row(vec![
                 Cell::new("Language").fg(Color::Blue).add_attribute(Attribute::Bold), 
@@ -261,7 +261,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 ]);
                 for c in &data.top_contributors {
                     ct.add_row(vec![
-                        Cell::new(make_link(&c.login, &c.html_url)).add_attribute(Attribute::Bold).add_attribute(Attribute::Underlined), 
+                        Cell::new(make_link(&c.login, &c.html_url)).fg(Color::White).add_attribute(Attribute::Bold), 
                         Cell::new(c.contributions.to_string()).fg(Color::Yellow),
                     ]);
                 }
@@ -275,7 +275,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let mut header = vec![Cell::new("Metric").fg(Color::Cyan).add_attribute(Attribute::Bold)];
             for res in &results {
                 let linked_name = make_link(&res.info.name, &res.info.html_url);
-                header.push(Cell::new(linked_name).fg(Color::Yellow).add_attribute(Attribute::Bold).add_attribute(Attribute::Underlined));
+                header.push(Cell::new(linked_name).fg(Color::Yellow).add_attribute(Attribute::Bold));
             }
             comp.set_header(header);
 
