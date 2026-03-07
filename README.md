@@ -18,7 +18,13 @@ A fast and clean Rust-based command-line tool to quickly analyze any GitHub repo
 
 ## Installation
 
-### 1. Prerequisites
+### Quick Install (Recommended)
+Run the following command to install `repo-analyzer` directly to your system:
+```bash
+curl -sSL https://raw.githubusercontent.com/Pranjul-00/repo-analyzer/main/install.sh | bash
+```
+
+### Prerequisites
 Make sure you have [Rust and Cargo](https://rustup.rs/) installed on your system.
 
 ### 2. Clone the Repository
