@@ -2,7 +2,7 @@ use clap::Parser;
 use colored::*;
 use comfy_table::modifiers::UTF8_ROUND_CORNERS;
 use comfy_table::presets::UTF8_FULL;
-use comfy_table::{Cell, Color, ContentArrangement, Table};
+use comfy_table::{Attribute, Cell, Color, ContentArrangement, Table};
 use dialoguer::Input;
 use indicatif::{ProgressBar, ProgressStyle};
 use reqwest::header::USER_AGENT;
@@ -50,7 +50,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     };
 
-    // Setup a professional spinner
     let pb = ProgressBar::new_spinner();
     pb.set_style(
         ProgressStyle::default_spinner()
@@ -69,7 +68,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .send()
         .await?;
 
-    // Stop and clear the spinner once we have the response
     pb.finish_and_clear();
 
     if response.status().is_success() {
@@ -82,36 +80,36 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .set_content_arrangement(ContentArrangement::Dynamic)
             .set_width(80)
             .set_header(vec![
-                Cell::new("Metric").fg(Color::Cyan).bold(),
-                Cell::new("Details").fg(Color::Cyan).bold(),
+                Cell::new("Metric").fg(Color::Cyan).add_attribute(Attribute::Bold),
+                Cell::new("Details").fg(Color::Cyan).add_attribute(Attribute::Bold),
             ]);
 
         table.add_row(vec![
-            Cell::new("Name").fg(Color::Blue).bold(),
+            Cell::new("Name").fg(Color::Blue).add_attribute(Attribute::Bold),
             Cell::new(&repo_info.name).fg(Color::White),
         ]);
         table.add_row(vec![
-            Cell::new("URL").fg(Color::Blue).bold(),
-            Cell::new(&repo_info.html_url).fg(Color::DarkGrey).italic(),
+            Cell::new("URL").fg(Color::Blue).add_attribute(Attribute::Bold),
+            Cell::new(&repo_info.html_url).fg(Color::DarkGrey).add_attribute(Attribute::Italic),
         ]);
         table.add_row(vec![
-            Cell::new("Language").fg(Color::Blue).bold(),
+            Cell::new("Language").fg(Color::Blue).add_attribute(Attribute::Bold),
             Cell::new(repo_info.language.unwrap_or_else(|| "Unknown".to_string())).fg(Color::Green),
         ]);
         table.add_row(vec![
-            Cell::new("Stars").fg(Color::Blue).bold(),
+            Cell::new("Stars").fg(Color::Blue).add_attribute(Attribute::Bold),
             Cell::new(repo_info.stargazers_count.to_string()).fg(Color::Yellow),
         ]);
         table.add_row(vec![
-            Cell::new("Forks").fg(Color::Blue).bold(),
+            Cell::new("Forks").fg(Color::Blue).add_attribute(Attribute::Bold),
             Cell::new(repo_info.forks_count.to_string()).fg(Color::Magenta),
         ]);
         table.add_row(vec![
-            Cell::new("Open Issues").fg(Color::Blue).bold(),
+            Cell::new("Open Issues").fg(Color::Blue).add_attribute(Attribute::Bold),
             Cell::new(repo_info.open_issues_count.to_string()).fg(Color::Red),
         ]);
         table.add_row(vec![
-            Cell::new("Size").fg(Color::Blue).bold(),
+            Cell::new("Size").fg(Color::Blue).add_attribute(Attribute::Bold),
             Cell::new(format!("{} KB", repo_info.size)).fg(Color::White),
         ]);
         
@@ -120,13 +118,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             None => "No license found".to_string(),
         };
         table.add_row(vec![
-            Cell::new("License").fg(Color::Blue).bold(),
+            Cell::new("License").fg(Color::Blue).add_attribute(Attribute::Bold),
             Cell::new(license_name).fg(Color::White),
         ]);
         
         table.add_row(vec![
-            Cell::new("Description").fg(Color::Blue).bold(),
-            Cell::new(repo_info.description.unwrap_or_else(|| "No description provided.".to_string())).italic(),
+            Cell::new("Description").fg(Color::Blue).add_attribute(Attribute::Bold),
+            Cell::new(repo_info.description.unwrap_or_else(|| "No description provided.".to_string())).add_attribute(Attribute::Italic),
         ]);
 
         println!("\n{}", table);
