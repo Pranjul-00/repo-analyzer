@@ -6,10 +6,11 @@ A fast and clean Rust-based command-line tool to quickly analyze any GitHub repo
 
 ## Features
 
-- **Interactive Mode**: Prompts you for the repository name if you forget to provide it.
-- **Positional Arguments**: Fast usage with just `cargo run -- <repo>`.
-- **Professional UI**: Clean, colored table-based data visualization with a loading spinner.
-- **Detailed Stats**: View stars, forks, watchers, open issues, repository size, language, and license.
+- **Interactive Mode**: Prompts you for repository names if you forget to provide them.
+- **Dynamic Comparison**: Compare two or more repositories side-by-side.
+- **JSON Export**: Output all repository data in a machine-readable JSON format.
+- **Top Contributors**: View the top 5 contributors and their total contributions.
+- **Rate Limit Tracking**: Monitor your GitHub API usage and reset times in real-time.
 - **High Rate Limits**: Support for GitHub Personal Access Tokens (PAT).
 
 ---
@@ -34,61 +35,39 @@ cargo build --release
 
 ## How to Use
 
-There are two ways to use the Repo Analyzer:
-
 ### Option A: Direct Command (Fastest)
-Provide the `username/reponame` as an argument after `--`:
+Provide one or more `username/reponame` as arguments:
 ```bash
+# Analyze a single repository
 cargo run -- tokio-rs/tokio
+
+# Compare multiple repositories side-by-side
+cargo run -- tokio-rs/tokio actix/actix-web facebook/react
 ```
 
 ### Option B: Interactive Mode
-Simply run the program, and it will ask you for the repository name:
+Simply run the program, and it will ask you for a repository name:
 ```bash
 cargo run
 ```
 
+### Option C: JSON Export
+Use the `-j` or `--json` flag to get raw data for scripting:
+```bash
+cargo run -- tokio-rs/tokio --json
+```
+
 ---
 
-## Authentication (Optional)
+## Authentication (Recommended)
 
 By default, the GitHub API allows **60 requests per hour** for unauthenticated users. To increase this to **5,000 requests per hour**, you can use a Personal Access Token (PAT).
 
-### 1. Generate a Token
 1. Go to your GitHub **Settings** -> **Developer Settings** -> **Personal Access Tokens**.
-2. Generate a new token (Fine-grained tokens are recommended with **Public Repositories (read-only)** access).
-3. Copy your token.
-
-### 2. Configure the Tool
-1. In the project root, rename `.env.example` to `.env`:
-   ```bash
-   cp .env.example .env
-   ```
-2. Open `.env` and replace `your_token_here` with your actual GitHub token:
+2. Generate a new token (**Public Repositories (read-only)** access).
+3. In the project root, rename `.env.example` to `.env` and add your token:
    ```text
    GITHUB_TOKEN=ghp_your_secret_token_here
-   ```
-
-**Note**: Your `.env` file is automatically ignored by git and will never be pushed to your repository.
-
----
-
-## Advanced Usage (System-wide)
-
-If you want to use the analyzer from anywhere on your computer without typing `cargo run`:
-
-1. Build the release binary:
-   ```bash
-   cargo build --release
-   ```
-2. Move the binary to your local bin folder:
-   ```bash
-   # On Linux/macOS
-   cp target/release/repo-analyzer /usr/local/bin/analyze
-   ```
-3. Now you can just type:
-   ```bash
-   analyze tokio-rs/tokio
    ```
 
 ---
