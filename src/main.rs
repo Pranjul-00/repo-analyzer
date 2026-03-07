@@ -4,9 +4,11 @@ use comfy_table::modifiers::UTF8_ROUND_CORNERS;
 use comfy_table::presets::UTF8_FULL;
 use comfy_table::{Attribute, Cell, Color, ContentArrangement, Table};
 use dialoguer::Input;
+use dotenvy::dotenv;
 use indicatif::{ProgressBar, ProgressStyle};
-use reqwest::header::USER_AGENT;
+use reqwest::header::{AUTHORIZATION, USER_AGENT};
 use serde::Deserialize;
+use std::env;
 use std::time::Duration;
 
 #[derive(Deserialize, Debug)]
@@ -38,6 +40,9 @@ struct Args {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Load environment variables from .env file if it exists
+    let _ = dotenv();
+    
     let args = Args::parse();
     
     let repo_name = match args.repo {
@@ -61,12 +66,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let url = format!("https://api.github.com/repos/{}", repo_name);
     let client = reqwest::Client::new();
-
-    let response = client
+    
+    // Check if GITHUB_TOKEN is set in the environment
+    let mut request_builder = client
         .get(&url)
-        .header(USER_AGENT, "repo-analyzer-cli")
-        .send()
-        .await?;
+        .header(USER_AGENT, "repo-analyzer-cli");
+
+    if let Ok(token) = env::var("GITHUB_TOKEN") {
+        request_builder = request_builder.header(AUTHORIZATION, format!("Bearer {}", token));
+    }
+
+    let response = request_builder.send().await?;
 
     pb.finish_and_clear();
 
