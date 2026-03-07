@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.3.0] - 2026-03-07
+
+### Added
+- **Language Breakdown**: Displays a detailed table of languages used in the repository with percentages.
+- **Improved Layout**: Separated Owner and Repository Name into distinct rows for better readability.
+- **Stable UI**: Reverted to vertical table stacking for maximum terminal compatibility.
+
 ## [1.2.0] - 2026-03-07
 
 ### Added

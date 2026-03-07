@@ -7,7 +7,8 @@ A fast and clean Rust-based command-line tool to quickly analyze any GitHub repo
 ## Features
 
 - **Interactive Mode**: Prompts you for repository names if you forget to provide them.
-- **Dynamic Comparison**: Compare two or more repositories side-by-side.
+- **Dynamic Comparison**: Compare any number of repositories side-by-side.
+- **Language Breakdown**: See the exact percentage of each programming language used in a project.
 - **JSON Export**: Output all repository data in a machine-readable JSON format.
 - **Top Contributors**: View the top 5 contributors and their total contributions.
 - **Rate Limit Tracking**: Monitor your GitHub API usage and reset times in real-time.
