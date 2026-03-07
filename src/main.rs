@@ -5,24 +5,24 @@ use comfy_table::presets::UTF8_FULL;
 use comfy_table::{Attribute, Cell, Color, ContentArrangement, Table};
 use dialoguer::Input;
 use dotenvy::dotenv;
-use indicatif::{ProgressBar, ProgressStyle};
+use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use reqwest::header::{AUTHORIZATION, USER_AGENT};
 use serde::{Deserialize, Serialize};
 use std::env;
 use std::time::Duration;
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 struct License {
     name: String,
 }
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 struct Contributor {
     login: String,
     contributions: u32,
 }
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 struct RepoInfo {
     name: String,
     stargazers_count: u32,
@@ -45,13 +45,50 @@ struct FullRepoData {
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct Args {
-    /// The repository name in the format username/reponame
-    #[arg(index = 1)]
-    repo: Option<String>,
+    /// The repository names in the format username/reponame (provide two to compare)
+    #[arg(index = 1, num_args = 0..=2)]
+    repos: Vec<String>,
 
     /// Output data in JSON format
     #[arg(short, long)]
     json: bool,
+}
+
+async fn fetch_repo_data(
+    client: &reqwest::Client,
+    repo_name: &str,
+    token: Option<&String>,
+) -> Result<FullRepoData, Box<dyn std::error::Error>> {
+    let repo_url = format!("https://api.github.com/repos/{}", repo_name);
+    let mut repo_req = client.get(&repo_url).header(USER_AGENT, "repo-analyzer-cli");
+    if let Some(t) = token {
+        repo_req = repo_req.header(AUTHORIZATION, format!("Bearer {}", t));
+    }
+    let repo_res = repo_req.send().await?;
+
+    if !repo_res.status().is_success() {
+        return Err(format!("Failed to fetch repo {}: {}", repo_name, repo_res.status()).into());
+    }
+
+    let repo_info: RepoInfo = repo_res.json().await?;
+
+    let contrib_url = format!("https://api.github.com/repos/{}/contributors?per_page=5", repo_name);
+    let mut contrib_req = client.get(&contrib_url).header(USER_AGENT, "repo-analyzer-cli");
+    if let Some(t) = token {
+        contrib_req = contrib_req.header(AUTHORIZATION, format!("Bearer {}", t));
+    }
+    let contrib_res = contrib_req.send().await?;
+
+    let contributors: Vec<Contributor> = if contrib_res.status().is_success() {
+        contrib_res.json().await?
+    } else {
+        Vec::new()
+    };
+
+    Ok(FullRepoData {
+        info: repo_info,
+        top_contributors: contributors,
+    })
 }
 
 #[tokio::main]
@@ -59,165 +96,124 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let _ = dotenv();
     let args = Args::parse();
     
-    let repo_name = match args.repo {
-        Some(r) => r,
-        None => {
-            if args.json {
-                // If JSON mode is on, we can't really do an interactive prompt cleanly to stdout
-                // So we'll just error out.
-                eprintln!("{}", "Error: No repository provided.".red());
-                std::process::exit(1);
-            }
-            println!("{}", "No repository provided via arguments.".yellow());
-            Input::<String>::new()
-                .with_prompt("Please enter a repository (username/repo)")
-                .interact_text()?
+    let mut repo_names = args.repos;
+    
+    if repo_names.is_empty() {
+        if args.json {
+            eprintln!("{}", "Error: No repository provided.".red());
+            std::process::exit(1);
         }
-    };
-
-    let pb = ProgressBar::new_spinner();
-    if !args.json {
-        pb.set_style(
-            ProgressStyle::default_spinner()
-                .tick_chars("|/-\\")
-                .template("{spinner:.cyan} {msg}")?,
-        );
-        pb.set_message("Fetching repository data...");
-        pb.enable_steady_tick(Duration::from_millis(100));
+        println!("{}", "No repository provided via arguments.".yellow());
+        let input = Input::<String>::new()
+            .with_prompt("Please enter a repository (username/repo)")
+            .interact_text()?;
+        repo_names.push(input);
     }
 
     let client = reqwest::Client::new();
     let token = env::var("GITHUB_TOKEN").ok();
+    
+    let m = MultiProgress::new();
+    let sty = ProgressStyle::default_spinner()
+        .tick_chars("|/-\\")
+        .template("{spinner:.cyan} {msg}")?;
 
-    // 1. Fetch Repo Info
-    let repo_url = format!("https://api.github.com/repos/{}", repo_name);
-    let mut repo_req = client.get(&repo_url).header(USER_AGENT, "repo-analyzer-cli");
-    if let Some(ref t) = token {
-        repo_req = repo_req.header(AUTHORIZATION, format!("Bearer {}", t));
-    }
-    let repo_res = repo_req.send().await?;
+    let mut results = Vec::new();
 
-    // 2. Fetch Contributors
-    let contrib_url = format!("https://api.github.com/repos/{}/contributors?per_page=5", repo_name);
-    let mut contrib_req = client.get(&contrib_url).header(USER_AGENT, "repo-analyzer-cli");
-    if let Some(ref t) = token {
-        contrib_req = contrib_req.header(AUTHORIZATION, format!("Bearer {}", t));
-    }
-    let contrib_res = contrib_req.send().await?;
-
-    if !args.json {
-        pb.finish_and_clear();
-    }
-
-    if repo_res.status().is_success() {
-        let repo_info: RepoInfo = repo_res.json().await?;
-        let contributors: Vec<Contributor> = if contrib_res.status().is_success() {
-            contrib_res.json().await?
+    for name in &repo_names {
+        let pb = if !args.json {
+            let pb = m.add(ProgressBar::new_spinner());
+            pb.set_style(sty.clone());
+            pb.set_message(format!("Fetching {}...", name));
+            pb.enable_steady_tick(Duration::from_millis(100));
+            Some(pb)
         } else {
-            Vec::new()
+            None
         };
 
-        if args.json {
-            let full_data = FullRepoData {
-                info: repo_info,
-                top_contributors: contributors,
-            };
-            println!("{}", serde_json::to_string_pretty(&full_data)?);
-        } else {
-            // Build Main Info Table
-            let mut main_table = Table::new();
-            main_table
-                .load_preset(UTF8_FULL)
-                .apply_modifier(UTF8_ROUND_CORNERS)
-                .set_content_arrangement(ContentArrangement::Dynamic)
-                .set_width(80)
-                .set_header(vec![
-                    Cell::new("Metric").fg(Color::Cyan).add_attribute(Attribute::Bold),
-                    Cell::new("Details").fg(Color::Cyan).add_attribute(Attribute::Bold),
-                ]);
-
-            main_table.add_row(vec![
-                Cell::new("Name").fg(Color::Blue).add_attribute(Attribute::Bold),
-                Cell::new(&repo_info.name).fg(Color::White),
-            ]);
-            main_table.add_row(vec![
-                Cell::new("URL").fg(Color::Blue).add_attribute(Attribute::Bold),
-                Cell::new(&repo_info.html_url).fg(Color::DarkGrey).add_attribute(Attribute::Italic),
-            ]);
-            main_table.add_row(vec![
-                Cell::new("Language").fg(Color::Blue).add_attribute(Attribute::Bold),
-                Cell::new(repo_info.language.unwrap_or_else(|| "Unknown".to_string())).fg(Color::Green),
-            ]);
-            main_table.add_row(vec![
-                Cell::new("Stars").fg(Color::Blue).add_attribute(Attribute::Bold),
-                Cell::new(repo_info.stargazers_count.to_string()).fg(Color::Yellow),
-            ]);
-            main_table.add_row(vec![
-                Cell::new("Forks").fg(Color::Blue).add_attribute(Attribute::Bold),
-                Cell::new(repo_info.forks_count.to_string()).fg(Color::Magenta),
-            ]);
-            main_table.add_row(vec![
-                Cell::new("Watchers").fg(Color::Blue).add_attribute(Attribute::Bold),
-                Cell::new(repo_info.subscribers_count.to_string()).fg(Color::Cyan),
-            ]);
-            main_table.add_row(vec![
-                Cell::new("Open Issues").fg(Color::Blue).add_attribute(Attribute::Bold),
-                Cell::new(repo_info.open_issues_count.to_string()).fg(Color::Red),
-            ]);
-            main_table.add_row(vec![
-                Cell::new("Size").fg(Color::Blue).add_attribute(Attribute::Bold),
-                Cell::new(format!("{} KB", repo_info.size)).fg(Color::White),
-            ]);
-            
-            let license_name = match repo_info.license {
-                Some(l) => l.name,
-                None => "No license found".to_string(),
-            };
-            main_table.add_row(vec![
-                Cell::new("License").fg(Color::Blue).add_attribute(Attribute::Bold),
-                Cell::new(license_name).fg(Color::White),
-            ]);
-            
-            main_table.add_row(vec![
-                Cell::new("Description").fg(Color::Blue).add_attribute(Attribute::Bold),
-                Cell::new(repo_info.description.unwrap_or_else(|| "No description provided.".to_string())).add_attribute(Attribute::Italic),
-            ]);
-
-            println!("\n{}", main_table);
-
-            if !contributors.is_empty() {
-                let mut contrib_table = Table::new();
-                contrib_table
-                    .load_preset(UTF8_FULL)
-                    .apply_modifier(UTF8_ROUND_CORNERS)
-                    .set_content_arrangement(ContentArrangement::Dynamic)
-                    .set_width(80)
-                    .set_header(vec![
-                        Cell::new("Top Contributors").fg(Color::Cyan).add_attribute(Attribute::Bold),
-                        Cell::new("Contributions").fg(Color::Cyan).add_attribute(Attribute::Bold),
-                    ]);
-
-                for person in contributors {
-                    contrib_table.add_row(vec![
-                        Cell::new(&person.login).fg(Color::White).add_attribute(Attribute::Bold),
-                        Cell::new(person.contributions.to_string()).fg(Color::Yellow),
-                    ]);
+        match fetch_repo_data(&client, name, token.as_ref()).await {
+            Ok(data) => {
+                if let Some(p) = pb { p.finish_and_clear(); }
+                results.push(data);
+            }
+            Err(e) => {
+                if let Some(p) = pb { p.finish_and_clear(); }
+                if args.json {
+                    eprintln!("Error: {}", e);
+                    std::process::exit(1);
+                } else {
+                    println!("{} {}", "Error:".red().bold(), e.to_string().white());
                 }
-                println!("\n{}", contrib_table);
             }
         }
+    }
 
-    } else {
-        if !args.json {
-            match repo_res.status().as_u16() {
-                404 => println!("{} {}", "Error:".red().bold(), "Repository not found.".white()),
-                403 => println!("{} {}", "Error:".red().bold(), "Rate limit exceeded or forbidden.".white()),
-                _ => println!("{} {} (Status: {})", "Error:".red().bold(), "GitHub returned an error.".white(), repo_res.status()),
+    if results.is_empty() { return Ok(()); }
+
+    if args.json {
+        println!("{}", serde_json::to_string_pretty(&results)?);
+    } else if results.len() == 1 {
+        let data = &results[0];
+        let info = &data.info;
+        
+        let mut table = Table::new();
+        table
+            .load_preset(UTF8_FULL)
+            .apply_modifier(UTF8_ROUND_CORNERS)
+            .set_content_arrangement(ContentArrangement::Dynamic)
+            .set_width(80)
+            .set_header(vec![
+                Cell::new("Metric").fg(Color::Cyan).add_attribute(Attribute::Bold),
+                Cell::new("Details").fg(Color::Cyan).add_attribute(Attribute::Bold),
+            ]);
+
+        table.add_row(vec![Cell::new("Name").fg(Color::Blue).add_attribute(Attribute::Bold), Cell::new(&info.name)]);
+        table.add_row(vec![Cell::new("URL").fg(Color::Blue).add_attribute(Attribute::Bold), Cell::new(&info.html_url).fg(Color::DarkGrey).add_attribute(Attribute::Italic)]);
+        table.add_row(vec![Cell::new("Language").fg(Color::Blue).add_attribute(Attribute::Bold), Cell::new(info.language.as_deref().unwrap_or("Unknown")).fg(Color::Green)]);
+        table.add_row(vec![Cell::new("Stars").fg(Color::Blue).add_attribute(Attribute::Bold), Cell::new(info.stargazers_count.to_string()).fg(Color::Yellow)]);
+        table.add_row(vec![Cell::new("Forks").fg(Color::Blue).add_attribute(Attribute::Bold), Cell::new(info.forks_count.to_string()).fg(Color::Magenta)]);
+        table.add_row(vec![Cell::new("Watchers").fg(Color::Blue).add_attribute(Attribute::Bold), Cell::new(info.subscribers_count.to_string()).fg(Color::Cyan)]);
+        table.add_row(vec![Cell::new("Issues").fg(Color::Blue).add_attribute(Attribute::Bold), Cell::new(info.open_issues_count.to_string()).fg(Color::Red)]);
+        table.add_row(vec![Cell::new("Size").fg(Color::Blue).add_attribute(Attribute::Bold), Cell::new(format!("{} KB", info.size))]);
+        
+        let lic = info.license.as_ref().map(|l| l.name.clone()).unwrap_or_else(|| "No license".to_string());
+        table.add_row(vec![Cell::new("License").fg(Color::Blue).add_attribute(Attribute::Bold), Cell::new(lic)]);
+        table.add_row(vec![Cell::new("Description").fg(Color::Blue).add_attribute(Attribute::Bold), Cell::new(info.description.as_deref().unwrap_or("None")).add_attribute(Attribute::Italic)]);
+
+        println!("\n{}", table);
+
+        if !data.top_contributors.is_empty() {
+            let mut ct = Table::new();
+            ct.load_preset(UTF8_FULL).apply_modifier(UTF8_ROUND_CORNERS).set_header(vec![
+                Cell::new("Top Contributors").fg(Color::Cyan).add_attribute(Attribute::Bold),
+                Cell::new("Contributions").fg(Color::Cyan).add_attribute(Attribute::Bold),
+            ]);
+            for c in &data.top_contributors {
+                ct.add_row(vec![Cell::new(&c.login).add_attribute(Attribute::Bold), Cell::new(c.contributions.to_string()).fg(Color::Yellow)]);
             }
-        } else {
-            eprintln!("Error: GitHub returned status {}", repo_res.status());
-            std::process::exit(1);
+            println!("\n{}", ct);
         }
+    } else if results.len() == 2 {
+        let r1 = &results[0].info;
+        let r2 = &results[1].info;
+
+        let mut comp = Table::new();
+        comp.load_preset(UTF8_FULL).apply_modifier(UTF8_ROUND_CORNERS).set_width(100)
+            .set_header(vec![
+                Cell::new("Metric").fg(Color::Cyan).add_attribute(Attribute::Bold),
+                Cell::new(&r1.name).fg(Color::Yellow).add_attribute(Attribute::Bold),
+                Cell::new(&r2.name).fg(Color::Yellow).add_attribute(Attribute::Bold),
+            ]);
+
+        comp.add_row(vec![Cell::new("Language").fg(Color::Blue).bold(), Cell::new(r1.language.as_deref().unwrap_or("-")), Cell::new(r2.language.as_deref().unwrap_or("-"))]);
+        comp.add_row(vec![Cell::new("Stars").fg(Color::Blue).bold(), Cell::new(r1.stargazers_count.to_string()), Cell::new(r2.stargazers_count.to_string())]);
+        comp.add_row(vec![Cell::new("Forks").fg(Color::Blue).bold(), Cell::new(r1.forks_count.to_string()), Cell::new(r2.forks_count.to_string())]);
+        comp.add_row(vec![Cell::new("Watchers").fg(Color::Blue).bold(), Cell::new(r1.subscribers_count.to_string()), Cell::new(r2.subscribers_count.to_string())]);
+        comp.add_row(vec![Cell::new("Issues").fg(Color::Blue).bold(), Cell::new(r1.open_issues_count.to_string()), Cell::new(r2.open_issues_count.to_string())]);
+        comp.add_row(vec![Cell::new("Size (KB)").fg(Color::Blue).bold(), Cell::new(r1.size.to_string()), Cell::new(r2.size.to_string())]);
+
+        println!("\n{}", "--- Side-by-Side Comparison ---".bold().magenta());
+        println!("{}", comp);
     }
 
     Ok(())
