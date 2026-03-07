@@ -37,3 +37,4 @@ All notable changes to this project will be documented in this file.
 - Initial release with basic repository metadata (stars, forks, issues).
 - `clap` support for basic CLI arguments.
 - `reqwest` and `serde` integration for GitHub API communication.
+
