@@ -1,5 +1,6 @@
 use clap::Parser;
 use colored::*;
+use dialoguer::Input;
 use reqwest::header::USER_AGENT;
 use serde::Deserialize;
 
@@ -25,17 +26,29 @@ struct RepoInfo {
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct Args {
-    #[arg(short, long)]
-    repo: String,
+    /// The repository name in the format username/reponame
+    #[arg(index = 1)]
+    repo: Option<String>,
 }
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
     
-    println!("{} {}...\n", "Scanning repository:".cyan().bold(), args.repo.yellow());
+    // If repo is provided as a positional arg, use it. Otherwise, prompt the user.
+    let repo_name = match args.repo {
+        Some(r) => r,
+        None => {
+            println!("{}", "No repository provided via arguments.".yellow());
+            Input::<String>::new()
+                .with_prompt("Please enter a repository (username/repo)")
+                .interact_text()?
+        }
+    };
 
-    let url = format!("https://api.github.com/repos/{}", args.repo);
+    println!("\n{} {}...\n", "Scanning repository:".cyan().bold(), repo_name.yellow());
+
+    let url = format!("https://api.github.com/repos/{}", repo_name);
     let client = reqwest::Client::new();
 
     let response = client
