@@ -37,6 +37,12 @@ struct RepoInfo {
     html_url: String,
 }
 
+impl RepoInfo {
+    fn owner(&self) -> &str {
+        self.full_name.split('/').next().unwrap_or("-")
+    }
+}
+
 #[derive(Serialize)]
 struct FullRepoData {
     info: RepoInfo,
@@ -56,7 +62,7 @@ struct Args {
     repos: Vec<String>,
 
     /// Output data in JSON format for scripting or pipe to other tools
-    #[arg(short, long, help = "Outputs raw data as a pretty-printed JSON object")]
+    #[arg(short, long)]
     json: bool,
 }
 
@@ -196,10 +202,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 ]);
 
             table.add_row(vec![
-                Cell::new("Full Name").fg(Color::Blue).add_attribute(Attribute::Bold), 
-                Cell::new(&info.full_name).fg(Color::Yellow).add_attribute(Attribute::Bold)
+                Cell::new("Repo Name").fg(Color::Blue).add_attribute(Attribute::Bold), 
+                Cell::new(&info.name).fg(Color::Yellow).add_attribute(Attribute::Bold)
             ]);
-            table.add_row(vec![Cell::new("Repo Name").fg(Color::Blue).add_attribute(Attribute::Bold), Cell::new(&info.name)]);
+            table.add_row(vec![
+                Cell::new("Owner").fg(Color::Blue).add_attribute(Attribute::Bold), 
+                Cell::new(info.owner())
+            ]);
             table.add_row(vec![
                 Cell::new("URL").fg(Color::Blue).add_attribute(Attribute::Bold), 
                 Cell::new(&info.html_url).fg(Color::DarkGrey).add_attribute(Attribute::Italic)
@@ -253,17 +262,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 println!("\n{}", ct);
             }
         } else {
+            // Multi-repo Comparison Mode (2 or more)
             let mut comp = Table::new();
             comp.load_preset(UTF8_FULL).apply_modifier(UTF8_ROUND_CORNERS).set_content_arrangement(ContentArrangement::Dynamic);
             
             let mut header = vec![Cell::new("Metric").fg(Color::Cyan).add_attribute(Attribute::Bold)];
             for res in &results {
-                // Split the full name into two lines: owner\nrepo
-                let split_name = res.info.full_name.replace("/", "\n");
-                header.push(Cell::new(&split_name).fg(Color::Yellow).add_attribute(Attribute::Bold));
+                header.push(Cell::new(&res.info.name).fg(Color::Yellow).add_attribute(Attribute::Bold));
             }
             comp.set_header(header);
 
+            comp.add_row(build_row("Owner", &results, |r| r.info.owner().to_string(), Color::White));
             comp.add_row(build_row("Language", &results, |r| r.info.language.as_deref().unwrap_or("-").to_string(), Color::Green));
             comp.add_row(build_row("Stars", &results, |r| r.info.stargazers_count.to_string(), Color::Yellow));
             comp.add_row(build_row("Forks", &results, |r| r.info.forks_count.to_string(), Color::Magenta));
