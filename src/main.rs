@@ -85,6 +85,11 @@ fn extract_rate_limit(headers: &HeaderMap) -> Option<RateLimit> {
     Some(RateLimit { limit, remaining, reset_in_mins })
 }
 
+/// Creates a terminal hyperlink (OSC 8)
+fn make_link(text: &str, url: &str) -> String {
+    format!("\x1b]8;;{}\x1b\\{}\x1b]8;;\x1b\\", url, text)
+}
+
 async fn fetch_repo_data(
     client: &reqwest::Client,
     repo_name: &str,
@@ -212,7 +217,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             ]);
             table.add_row(vec![
                 Cell::new("URL").fg(Color::Blue).add_attribute(Attribute::Bold), 
-                Cell::new(&info.html_url).fg(Color::DarkGrey).add_attribute(Attribute::Italic)
+                Cell::new(make_link(&info.html_url, &info.html_url)).fg(Color::DarkGrey).add_attribute(Attribute::Italic).add_attribute(Attribute::Underlined)
             ]);
             table.add_row(vec![
                 Cell::new("Language").fg(Color::Blue).add_attribute(Attribute::Bold), 
@@ -253,13 +258,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 ct.load_preset(UTF8_FULL).apply_modifier(UTF8_ROUND_CORNERS).set_header(vec![
                     Cell::new("Contributor").fg(Color::Cyan).add_attribute(Attribute::Bold),
                     Cell::new("Contributions").fg(Color::Cyan).add_attribute(Attribute::Bold),
-                    Cell::new("Profile URL").fg(Color::Cyan).add_attribute(Attribute::Bold),
                 ]);
                 for c in &data.top_contributors {
                     ct.add_row(vec![
-                        Cell::new(&c.login).add_attribute(Attribute::Bold), 
+                        Cell::new(make_link(&c.login, &c.html_url)).add_attribute(Attribute::Bold).add_attribute(Attribute::Underlined), 
                         Cell::new(c.contributions.to_string()).fg(Color::Yellow),
-                        Cell::new(&c.html_url).fg(Color::DarkGrey).add_attribute(Attribute::Italic).add_attribute(Attribute::Underlined),
                     ]);
                 }
                 println!("\n{}", ct);
@@ -271,7 +274,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             
             let mut header = vec![Cell::new("Metric").fg(Color::Cyan).add_attribute(Attribute::Bold)];
             for res in &results {
-                header.push(Cell::new(&res.info.name).fg(Color::Yellow).add_attribute(Attribute::Bold));
+                let linked_name = make_link(&res.info.name, &res.info.html_url);
+                header.push(Cell::new(linked_name).fg(Color::Yellow).add_attribute(Attribute::Bold).add_attribute(Attribute::Underlined));
             }
             comp.set_header(header);
 
