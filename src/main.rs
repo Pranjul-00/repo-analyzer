@@ -205,12 +205,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 Cell::new(&r2.name).fg(Color::Yellow).add_attribute(Attribute::Bold),
             ]);
 
-        comp.add_row(vec![Cell::new("Language").fg(Color::Blue).bold(), Cell::new(r1.language.as_deref().unwrap_or("-")), Cell::new(r2.language.as_deref().unwrap_or("-"))]);
-        comp.add_row(vec![Cell::new("Stars").fg(Color::Blue).bold(), Cell::new(r1.stargazers_count.to_string()), Cell::new(r2.stargazers_count.to_string())]);
-        comp.add_row(vec![Cell::new("Forks").fg(Color::Blue).bold(), Cell::new(r1.forks_count.to_string()), Cell::new(r2.forks_count.to_string())]);
-        comp.add_row(vec![Cell::new("Watchers").fg(Color::Blue).bold(), Cell::new(r1.subscribers_count.to_string()), Cell::new(r2.subscribers_count.to_string())]);
-        comp.add_row(vec![Cell::new("Issues").fg(Color::Blue).bold(), Cell::new(r1.open_issues_count.to_string()), Cell::new(r2.open_issues_count.to_string())]);
-        comp.add_row(vec![Cell::new("Size (KB)").fg(Color::Blue).bold(), Cell::new(r1.size.to_string()), Cell::new(r2.size.to_string())]);
+        comp.add_row(vec![Cell::new("Language").fg(Color::Blue).add_attribute(Attribute::Bold), Cell::new(r1.language.as_deref().unwrap_or("-")), Cell::new(r2.language.as_deref().unwrap_or("-"))]);
+        comp.add_row(vec![Cell::new("Stars").fg(Color::Blue).add_attribute(Attribute::Bold), Cell::new(r1.stargazers_count.to_string()), Cell::new(r2.stargazers_count.to_string())]);
+        comp.add_row(vec![Cell::new("Forks").fg(Color::Blue).add_attribute(Attribute::Bold), Cell::new(r1.forks_count.to_string()), Cell::new(r2.forks_count.to_string())]);
+        comp.add_row(vec![Cell::new("Watchers").fg(Color::Blue).add_attribute(Attribute::Bold), Cell::new(r1.subscribers_count.to_string()), Cell::new(r2.subscribers_count.to_string())]);
+        comp.add_row(vec![Cell::new("Issues").fg(Color::Blue).add_attribute(Attribute::Bold), Cell::new(r1.open_issues_count.to_string()), Cell::new(r2.open_issues_count.to_string())]);
+        comp.add_row(vec![Cell::new("Size (KB)").fg(Color::Blue).add_attribute(Attribute::Bold), Cell::new(r1.size.to_string()), Cell::new(r2.size.to_string())]);
 
         println!("\n{}", "--- Side-by-Side Comparison ---".bold().magenta());
         println!("{}", comp);
