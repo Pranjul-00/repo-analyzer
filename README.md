@@ -1,127 +1,100 @@
-# Repo-Analyzer
+# Repo Analyzer CLI
 
-`repo-analyzer` is a high-performance command-line interface (CLI) tool built in Rust. It provides a quick and efficient way to fetch and analyze GitHub repository statistics directly from your terminal.
-
-Designed for developers who want to evaluate a project's health and popularity without leaving their workflow, it leverages asynchronous programming to deliver near-instant results.
+A fast and clean Rust-based command-line tool to quickly analyze any GitHub repository. Get stars, forks, issues, and more directly in your terminal with a beautifully styled output.
 
 ---
 
 ## Features
 
--   **Repository Health at a Glance**: Instantly view stars, open issues, and project descriptions.
--   **Language Detection**: Identifies the primary programming language of the repository.
--   **Asynchronous & Fast**: Powered by `tokio` and `reqwest` for non-blocking I/O performance.
--   **Safe Data Handling**: Uses Rust's robust type system and `serde` for reliable JSON parsing.
--   **User-Friendly CLI**: Intuitive command-line arguments powered by `clap`.
+- **Interactive Mode**: Prompts you for the repository name if you forget to provide it.
+- **Positional Arguments**: Fast usage with just `cargo run -- <repo>`.
+- **Professional UI**: Clean, colored table-based data visualization with a loading spinner.
+- **Detailed Stats**: View stars, forks, watchers, open issues, repository size, language, and license.
+- **High Rate Limits**: Support for GitHub Personal Access Tokens (PAT).
 
 ---
 
-## Technical Stack
+## Installation
 
--   **Language**: Rust (2024 Edition)
--   **Runtime**: [Tokio](https://tokio.rs/) (Asynchronous ecosystem)
--   **HTTP Client**: [Reqwest](https://docs.rs/reqwest/latest/reqwest/) (With JSON support)
--   **Parsing**: [Serde](https://serde.rs/) (Serialization/Deserialization)
--   **CLI Framework**: [Clap v4](https://docs.rs/clap/latest/clap/) (Command Line Argument Parser)
+### 1. Prerequisites
+Make sure you have [Rust and Cargo](https://rustup.rs/) installed on your system.
 
----
-
-## Getting Started
-
-### Prerequisites
-
-You must have the Rust toolchain installed. If you haven't installed it yet, use [rustup](https://rustup.rs/):
-
+### 2. Clone the Repository
 ```bash
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+git clone https://github.com/Pranjul-00/repo-analyzer.git
+cd repo-analyzer
 ```
 
-### Installation
-
-1.  **Clone the Repository**:
-    ```bash
-    git clone https://github.com/Pranjul-00/repo-analyzer.git
-    cd repo-analyzer
-    ```
-
-2.  **Build the Project**:
-    ```bash
-    cargo build --release
-    ```
-    The compiled binary will be available at `./target/release/repo-analyzer`.
-
-3.  **Install Locally (Optional)**:
-    To use the command from anywhere in your terminal:
-    ```bash
-    cargo install --path .
-    ```
-
----
-
-## Usage
-
-The tool requires a GitHub repository path in the format `owner/repository`.
-
-### Basic Command
-
-Using `cargo run`:
+### 3. Build the Project
 ```bash
-cargo run -- --repo <owner/repo>
+cargo build --release
 ```
 
-Using the compiled binary:
+---
+
+## How to Use
+
+There are two ways to use the Repo Analyzer:
+
+### Option A: Direct Command (Fastest)
+Provide the `username/reponame` as an argument after `--`:
 ```bash
-./target/release/repo-analyzer --repo rust-lang/rust
+cargo run -- tokio-rs/tokio
 ```
 
-### Examples
-
-**Analyze the Rust compiler repository:**
+### Option B: Interactive Mode
+Simply run the program, and it will ask you for the repository name:
 ```bash
-repo-analyzer --repo rust-lang/rust
-```
-
-**Output Example:**
-```text
-Scanning repository: rust-lang/rust...
-
---- Repository Status ---
-Name:      rust
-Stars:     102450
-Issues:    8420
-Language:  Rust
-Desc:      Empowering everyone to build reliable and efficient software.
+cargo run
 ```
 
 ---
 
-## Command Line Options
+## Authentication (Optional)
 
-| Flag | Long Flag | Description | Required |
-| :--- | :--- | :--- | :--- |
-| `-r` | `--repo` | The GitHub repository to scan (e.g., `facebook/react`) | **Yes** |
-| `-h` | `--help` | Prints help information | No |
-| `-V` | `--version` | Prints version information | No |
+By default, the GitHub API allows **60 requests per hour** for unauthenticated users. To increase this to **5,000 requests per hour**, you can use a Personal Access Token (PAT).
+
+### 1. Generate a Token
+1. Go to your GitHub **Settings** -> **Developer Settings** -> **Personal Access Tokens**.
+2. Generate a new token (Fine-grained tokens are recommended with **Public Repositories (read-only)** access).
+3. Copy your token.
+
+### 2. Configure the Tool
+1. In the project root, rename `.env.example` to `.env`:
+   ```bash
+   cp .env.example .env
+   ```
+2. Open `.env` and replace `your_token_here` with your actual GitHub token:
+   ```text
+   GITHUB_TOKEN=ghp_your_secret_token_here
+   ```
+
+**Note**: Your `.env` file is automatically ignored by git and will never be pushed to your repository.
 
 ---
 
-## Error Handling
+## Advanced Usage (System-wide)
 
-`repo-analyzer` gracefully handles common errors:
--   **Invalid Repositories**: Notifies you if a repository doesn't exist.
--   **Network Issues**: Provides clear feedback if there are connectivity problems.
--   **GitHub API Restrictions**: Correctly identifies when it's blocked by API rate limits or missing headers.
+If you want to use the analyzer from anywhere on your computer without typing `cargo run`:
+
+1. Build the release binary:
+   ```bash
+   cargo build --release
+   ```
+2. Move the binary to your local bin folder:
+   ```bash
+   # On Linux/macOS
+   cp target/release/repo-analyzer /usr/local/bin/analyze
+   ```
+3. Now you can just type:
+   ```bash
+   analyze tokio-rs/tokio
+   ```
 
 ---
 
-## Contributing
-
-Contributions are welcome! Feel free to:
-1. Fork the project.
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`).
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`).
-4. Push to the branch (`git push origin feature/AmazingFeature`).
-5. Open a Pull Request.
+## License
+This project is open-source. Check the repository's license for more details.
 
 ---
 
