@@ -45,8 +45,8 @@ struct FullRepoData {
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct Args {
-    /// The repository names in the format username/reponame (provide two to compare)
-    #[arg(index = 1, num_args = 0..=2)]
+    /// The repository names in the format username/reponame (provide multiple to compare)
+    #[arg(index = 1)]
     repos: Vec<String>,
 
     /// Output data in JSON format
@@ -193,24 +193,58 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
             println!("\n{}", ct);
         }
-    } else if results.len() == 2 {
-        let r1 = &results[0].info;
-        let r2 = &results[1].info;
-
+    } else {
+        // Multi-repo Comparison Mode (2 or more)
         let mut comp = Table::new();
-        comp.load_preset(UTF8_FULL).apply_modifier(UTF8_ROUND_CORNERS).set_width(100)
-            .set_header(vec![
-                Cell::new("Metric").fg(Color::Cyan).add_attribute(Attribute::Bold),
-                Cell::new(&r1.name).fg(Color::Yellow).add_attribute(Attribute::Bold),
-                Cell::new(&r2.name).fg(Color::Yellow).add_attribute(Attribute::Bold),
-            ]);
+        comp.load_preset(UTF8_FULL).apply_modifier(UTF8_ROUND_CORNERS).set_content_arrangement(ContentArrangement::Dynamic);
+        
+        let mut header = vec![Cell::new("Metric").fg(Color::Cyan).add_attribute(Attribute::Bold)];
+        for res in &results {
+            header.push(Cell::new(&res.info.name).fg(Color::Yellow).add_attribute(Attribute::Bold));
+        }
+        comp.set_header(header);
 
-        comp.add_row(vec![Cell::new("Language").fg(Color::Blue).add_attribute(Attribute::Bold), Cell::new(r1.language.as_deref().unwrap_or("-")), Cell::new(r2.language.as_deref().unwrap_or("-"))]);
-        comp.add_row(vec![Cell::new("Stars").fg(Color::Blue).add_attribute(Attribute::Bold), Cell::new(r1.stargazers_count.to_string()), Cell::new(r2.stargazers_count.to_string())]);
-        comp.add_row(vec![Cell::new("Forks").fg(Color::Blue).add_attribute(Attribute::Bold), Cell::new(r1.forks_count.to_string()), Cell::new(r2.forks_count.to_string())]);
-        comp.add_row(vec![Cell::new("Watchers").fg(Color::Blue).add_attribute(Attribute::Bold), Cell::new(r1.subscribers_count.to_string()), Cell::new(r2.subscribers_count.to_string())]);
-        comp.add_row(vec![Cell::new("Issues").fg(Color::Blue).add_attribute(Attribute::Bold), Cell::new(r1.open_issues_count.to_string()), Cell::new(r2.open_issues_count.to_string())]);
-        comp.add_row(vec![Cell::new("Size (KB)").fg(Color::Blue).add_attribute(Attribute::Bold), Cell::new(r1.size.to_string()), Cell::new(r2.size.to_string())]);
+        // Language Row
+        let mut lang_row = vec![Cell::new("Language").fg(Color::Blue).add_attribute(Attribute::Bold)];
+        for res in &results {
+            lang_row.push(Cell::new(res.info.language.as_deref().unwrap_or("-")).fg(Color::Green));
+        }
+        comp.add_row(lang_row);
+
+        // Stars Row
+        let mut stars_row = vec![Cell::new("Stars").fg(Color::Blue).add_attribute(Attribute::Bold)];
+        for res in &results {
+            stars_row.push(Cell::new(res.info.stargazers_count.to_string()).fg(Color::Yellow));
+        }
+        comp.add_row(stars_row);
+
+        // Forks Row
+        let mut forks_row = vec![Cell::new("Forks").fg(Color::Blue).add_attribute(Attribute::Bold)];
+        for res in &results {
+            forks_row.push(Cell::new(res.info.forks_count.to_string()).fg(Color::Magenta));
+        }
+        comp.add_row(forks_row);
+
+        // Watchers Row
+        let mut watch_row = vec![Cell::new("Watchers").fg(Color::Blue).add_attribute(Attribute::Bold)];
+        for res in &results {
+            watch_row.push(Cell::new(res.info.subscribers_count.to_string()).fg(Color::Cyan));
+        }
+        comp.add_row(watch_row);
+
+        // Issues Row
+        let mut issues_row = vec![Cell::new("Issues").fg(Color::Blue).add_attribute(Attribute::Bold)];
+        for res in &results {
+            issues_row.push(Cell::new(res.info.open_issues_count.to_string()).fg(Color::Red));
+        }
+        comp.add_row(issues_row);
+
+        // Size Row
+        let mut size_row = vec![Cell::new("Size (KB)").fg(Color::Blue).add_attribute(Attribute::Bold)];
+        for res in &results {
+            size_row.push(Cell::new(res.info.size.to_string()));
+        }
+        comp.add_row(size_row);
 
         println!("\n{}", "--- Side-by-Side Comparison ---".bold().magenta());
         println!("{}", comp);
