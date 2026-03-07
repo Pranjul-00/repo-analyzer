@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.4.0] - 2026-03-07
+
+### Added
+- **Quick Install Script**: Added `install.sh` for one-command installation via `curl`.
+- **README Updates**: Documented the new installation method.
+
 ## [1.3.0] - 2026-03-07
 
 ### Added
