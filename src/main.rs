@@ -90,7 +90,7 @@ fn extract_rate_limit(headers: &HeaderMap) -> Option<RateLimit> {
 async fn fetch_repo_data(
     client: &reqwest::Client,
     repo_name: &str,
-    token: Option<&String>,
+    mut token: Option<&String>,
 ) -> Result<(FullRepoData, HeaderMap), Box<dyn std::error::Error>> {
     let base_url = format!("https://api.github.com/repos/{}", repo_name);
     
@@ -98,7 +98,12 @@ async fn fetch_repo_data(
     if let Some(t) = token {
         repo_req = repo_req.header(AUTHORIZATION, format!("Bearer {}", t));
     }
-    let repo_res = repo_req.send().await?;
+    let mut repo_res = repo_req.send().await?;
+
+    if repo_res.status() == reqwest::StatusCode::UNAUTHORIZED && token.is_some() {
+        token = None;
+        repo_res = client.get(&base_url).header(USER_AGENT, "repo-analyzer-cli").send().await?;
+    }
 
     if !repo_res.status().is_success() {
         return Err(format!("Failed to fetch repo {}: {}", repo_name, repo_res.status()).into());
